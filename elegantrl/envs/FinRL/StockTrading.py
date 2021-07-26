@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import numpy.random as rd
 import torch
+from datetime import datetime , timedelta
 
 
 class StockTradingEnv:
@@ -144,7 +145,7 @@ class StockTradingEnv:
             eval_tech_ary = load_dict['eval_tech_ary'].astype(np.float32)
         else:
             processed_df = self.processed_raw_data(raw_data_path, processed_data_path,
-                                                   ticker_list, tech_indicator_list)
+                                                   ticker_list, tech_indicator_list, start_date, env_eval_date)
 
             def data_split(df, start, end):
                 data = df[(df.date >= start) & (df.date < end)]
@@ -176,7 +177,7 @@ class StockTradingEnv:
         return price_ary, tech_ary
 
     def processed_raw_data(self, raw_data_path, processed_data_path,
-                           ticker_list, tech_indicator_list):
+                           ticker_list, tech_indicator_list, start, end):
         if os.path.exists(processed_data_path):
             processed_df = pd.read_pickle(processed_data_path)  # DataFrame of Pandas
             # print('| processed_df.columns.values:', processed_df.columns.values)
@@ -187,28 +188,24 @@ class StockTradingEnv:
                                  user_defined_feature=False,
                                  use_technical_indicator=True,
                                  tech_indicator_list=tech_indicator_list, )
-            raw_df = self.get_raw_data(raw_data_path, ticker_list)
+            raw_df = self.get_raw_data(raw_data_path, ticker_list, start, end )
 
             processed_df = fe.preprocess_data(raw_df)
             processed_df.to_pickle(processed_data_path)
             print("| FeatureEngineer: finish processing data")
 
-        '''you can also load from csv'''
-        # processed_data_path = f'{cwd}/dow_30_daily_2000_2021.csv'
-        # if os.path.exists(processed_data_path):
-        #     processed_df = pd.read_csv(processed_data_path)
         return processed_df
 
     @staticmethod
-    def get_raw_data(raw_data_path, ticker_list):
+    def get_raw_data(raw_data_path, ticker_list, start, end ):
         if os.path.exists(raw_data_path):
             raw_df = pd.read_pickle(raw_data_path)  # DataFrame of Pandas
             # print('| raw_df.columns.values:', raw_df.columns.values)
             print(f"| load data: {raw_data_path}")
         else:
             print("| YahooDownloader: start downloading data (1 minute)")
-            raw_df = YahooDownloader(start_date="2000-01-01",
-                                     end_date="2021-01-01",
+            raw_df = YahooDownloader(start_date=start,
+                                     end_date=end,
                                      ticker_list=ticker_list, ).fetch_data()
             raw_df.to_pickle(raw_data_path)
             print("| YahooDownloader: finish downloading data")
